@@ -22,20 +22,35 @@ namespace Be.Vlaanderen.Basisregisters.Api.Exceptions
 
         public string GetInstanceBaseUri(HttpContext httpContext)
         {
-            if (httpContext.Request.Path.HasValue && httpContext.Request.Path.Value.ToLower().Contains("/v1/"))
-            {
-                return $"{BaseUrl}/v1/foutmeldingen";
-            }
+            var apiVersion = httpContext.Request.Path.HasValue && httpContext.Request.Path.Value.ToLower().Contains("/v1/")
+                ? "v1"
+                : "v2";
 
-            return $"{BaseUrl}/v2/foutmeldingen";
+            return $"{BaseUrl}/{apiVersion}/foutmeldingen";
+        }
+
+        public string GetInstanceBaseUri(string apiVersion)
+        {
+            return $"{BaseUrl}/{apiVersion}/foutmeldingen";
         }
 
         public string GetInstanceUri(HttpContext httpContext)
         {
+            var problemBaseInstanceUri = GetInstanceBaseUri(httpContext);
+            return GetInstanceUriBase(httpContext, problemBaseInstanceUri);
+        }
+
+        public string GetInstanceUri(HttpContext httpContext, string apiVersion)
+        {
+            var problemBaseInstanceUri = GetInstanceBaseUri(apiVersion);
+            return GetInstanceUriBase(httpContext, problemBaseInstanceUri);
+        }
+
+        private string GetInstanceUriBase(HttpContext httpContext, string problemBaseInstanceUri)
+        {
             // this is the same behaviour that Asp.Net core uses
             var traceId = Activity.Current?.Id ?? httpContext.TraceIdentifier;
 
-            var problemBaseInstanceUri = GetInstanceBaseUri(httpContext);
             return !string.IsNullOrWhiteSpace(traceId)
                 ? $"{problemBaseInstanceUri}/{Deterministic.Create(ProblemDetailsSeed, traceId):N}"
                 : $"{problemBaseInstanceUri}/{ProblemDetails.GetProblemNumber()}";
